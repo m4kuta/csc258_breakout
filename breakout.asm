@@ -21,13 +21,16 @@ ADDR_DSPL:
 # The address of the keyboard. Don't forget to connect it!
 ADDR_KBRD:
     .word 0xffff0000
-
+PADDLE_CLR:
+BRICKS_CLR:
+WALL_CLR:
 ##############################################################################
 # Mutable Data
-KBRD_LOC:
-BALL_LOC:
+BALL_POS_X:
+BALL_POS_Y:
 BALL_VEL_X:
 BALL_VEL_Y:
+PADDLE_POS:
 ##############################################################################
 
 ##############################################################################
