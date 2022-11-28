@@ -1,7 +1,7 @@
 ################ CSC258H1F Fall 2022 Assembly Final Project ##################
 # This file contains our implementation of Breakout.
 #
-# Student 1: Name, Student Number
+# Student 1: David Basil 1006900285
 # Student 2: Name, Student Number
 ######################## Bitmap Display Configuration ########################
 # - Unit width in pixels:       4
@@ -36,10 +36,10 @@ ADDR_KBRD:
 main:
     jal draw_first_round_red
     jal draw_walls
-    li $a0, 65
-    li $a1, 55
+    li $a0, 65 #set x of the ball
+    li $a1, 55 #set y of the ball
     jal draw_ball
-    li $a0, 54
+    li $a0, 54 #set x of the paddle
     jal draw_paddle
     
     j end
@@ -83,63 +83,67 @@ draw_first_round_red:
 	li $t1, 6 #how many blocks high
 	li $a0, 5 #first block x
 	li $a1, 5 #first block y
-	li $t2, 0 
-	addi $t6, $ra, 0
+	li $t2, 0 #number of rows of blocks drawn so far
+	addi $t6, $ra, 0 #save the address that we'll be returning to bc we will use ra
 first_round_loop_vert:
 	beq $t2, $t1, end_first_round_loop_vert
-	li $t3, 0
+	li $t3, 0 #number of blocks drawn so far
 first_round_loop_horiz:
 	beq $t3, $t0, end_first_round_loop_horiz
-	sw $a0, 0($sp)
-	sw $a1, 4($sp)
-	sw $t0, 8($sp)
-	sw $t1, 12($sp)
-	sw $t2, 16($sp)
-	sw $t3, 20($sp)
-	jal draw_block
-	lw $a0, 0($sp)
-	lw $a1, 4($sp)
-	lw $t0, 8($sp)
-	lw $t1, 12($sp)
-	lw $t2, 16($sp)
-	lw $t3, 20($sp)
-	addi $t3, $t3, 1
-	addi $a0, $a0, 12
+	sw $a0, 0($sp) #save stuff to the stack
+	sw $a1, 4($sp)#save stuff to the stack
+	sw $t0, 8($sp)#save stuff to the stack
+	sw $t1, 12($sp)#save stuff to the stack
+	sw $t2, 16($sp)#save stuff to the stack
+	sw $t3, 20($sp)#save stuff to the stack
+	jal draw_block #Call helper to draw a block at the coord a0 a1
+	lw $a0, 0($sp)#return stuff from the stack
+	lw $a1, 4($sp)#return stuff from the stack
+	lw $t0, 8($sp)#return stuff from the stack
+	lw $t1, 12($sp)#return stuff from the stack
+	lw $t2, 16($sp)#return stuff from the stack
+	lw $t3, 20($sp)#return stuff from the stack
+	addi $t3, $t3, 1 #iterate the number of blocks drawn
+	addi $a0, $a0, 12 #move the pointer right
 	j first_round_loop_horiz
 end_first_round_loop_horiz:
- 	addi $t2, $t2, 1
-	addi $a1, $a1, 8
-	li $a0, 5
- 	j first_round_loop_vert
+ 	addi $t2, $t2, 1 # number of rows drawn += 1
+	addi $a1, $a1, 8 # move down
+	li $a0, 5 #move to the position x=5
+ 	j first_round_loop_vert #loop
  end_first_round_loop_vert:
- 	jr $t6
+ 	jr $t6 #return
 
 
 draw_block:
-	#TODO or should ball position be in .data
-	
+	#t2 will be the start of the current row
+	#t1 is the current posiiton at a given time
+	#a2 is the color
+	#t0 is the start of the bitmap display
+	#t3 is the location where we stop drawing the row if we get there
+	#t4 is the location where we stop drawing the whole thing if we get there
 	la $t0, ADDR_DSPL #put display address into t0
 	sll $a0, $a0, 2 #mutliply the x
 	sll $a1, $a1, 9 # multiply the y
 	add $a0, $a0, $a1 #combine them
 	add $t0, $t0, $a0 #add that to t0
-	addi $t1, $t0, 0
-	addi $t2, $t1, 0
-	addi $t4, $t2, 2048
+	addi $t1, $t0, 0 # set t1 to display address
+	addi $t2, $t1, 0 # set t2 to display address
+	addi $t4, $t2, 2048 # t4 = coordinate to stop whole thing when we reach it
 block_loop_y:
-	beq $t2, $t4, end_block_loop_y
-	addi $t3, $t2, 32
-	addi $t1, $t2, 0
+	beq $t2, $t4, end_block_loop_y #if we have reached the last coordinate go to end
+	addi $t3, $t2, 32 #t3 = location to stop drawing row at
+	addi $t1, $t2, 0 # set t1 to equal t2, that is, start t1 at the beginning of this row
 block_loop_x:
-	beq $t1, $t3, end_block_loop_x
+	beq $t1, $t3, end_block_loop_x #if we've reached t3, end
 	sw $a2, 0($t1) #paint
-	addi $t1, $t1, 4
-	j block_loop_x
+	addi $t1, $t1, 4 #iterate t1 by 4 (a pixel)
+	j block_loop_x #loop
 end_block_loop_x:
-	addi $t2, $t2, 512
+	addi $t2, $t2, 512 #iterate the y position by a whole row
 	j block_loop_y
 end_block_loop_y:
-	jr $ra
+	jr $ra #return
 	
 	        
 draw_ball:
@@ -151,33 +155,30 @@ draw_ball:
 	add $t0, $t0, $a0 #add that to t0
 	li $t1 0x33ff33 #get the ball color
 	sw $t1, 0($t0) #paint
-	jr $ra
+	jr $ra #return
 	
 draw_walls:
-	la $t0, ADDR_DSPL
-	li $t2 0xffffff
-	addi $t1, $t0, 512
+	la $t0, ADDR_DSPL #display address
+	li $t2 0xffffff #color white
+	addi $t1, $t0, 512 #this is the location at the end of the top border
 top_loop:
-	beq $t0, $t1, end_top_loop
-	sw $t2, 0($t0)
-	addi $t0, $t0, 4
-	j top_loop
+	beq $t0, $t1, end_top_loop #check if we're at the end of the top border
+	sw $t2, 0($t0) #paint
+	addi $t0, $t0, 4 #move our coordinate
+	j top_loop #loop
 end_top_loop:
-	la $t0, ADDR_DSPL
-	la $t1, ADDR_DSPL
-	li $t1, 0x10018000
-	li $t4, 0
+	la $t0, ADDR_DSPL # go back to the start of the display
+	li $t1, 0x10018000 #endpoint of where we're drawing
 side_loop:
 	slt $t5, $t0, $t1
 	beq $t5, $zero, end_side_loop
-	sw $t2, 0($t0)
-	addi $t0, $t0, 512
-	sw $t2, 508($t0)
-	addi $t4, $t4, 1
-	j side_loop
+	sw $t2, 0($t0) #draw a pixel
+	addi $t0, $t0, 512  #iterate down
+	sw $t2, 508($t0) #draw a pixel on the other edge of the screen (right wall)
+	j side_loop #loop
 end_side_loop:
-	la $t0, ADDR_DSPL
-	jr $ra
+	la $t0, ADDR_DSPL # i think this is unnecessary
+	jr $ra #return
 	
 erase_ball:
 	#TODO or should ball position be in .data
