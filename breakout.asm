@@ -26,6 +26,8 @@ ADDR_KBRD:
 # Mutable Data
 KBRD_LOC:
 BALL_LOC:
+BALL_VEL_X:
+BALL_VEL_Y:
 ##############################################################################
 
 ##############################################################################
@@ -42,20 +44,22 @@ main:
 	# Draw walls
     jal draw_walls
     
+	# Draw initial paddle position
+    li $a0, 54 #set x of the paddle
+    jal draw_paddle
+
 	# Draw initial ball position
 	li $a0, 65 #set x of the ball
     li $a1, 55 #set y of the ball
    	jal draw_ball
     
-	# Draw initial paddle position
-    li $a0, 54 #set x of the paddle
-    jal draw_paddle
-    
+	# Set initial velocity of the ball
+	# TODO
+
 	# Game loop
 	jal game_loop
 
     j end
-
 
 
 game_loop:
@@ -65,13 +69,65 @@ game_loop:
     
 	# 2a. Check for collisions
 	# 2b. Update locations (paddle, ball)
+
+	# Calculate ball new_loc
+		# Using curr_loc and velocity
+
+	# Check for collisions
+		# Check color of new_loc pixel
+			# Based on color you know what you're about to hit
+				# Wall
+				# Ceiling
+				# Brick
+				# Paddle
+				# Bottom (y pos, not a color)
+			# If hitting brick, determine what edge is hit
+				# Check if color of left, right if same as hit pixel
+			# If hitting paddle, determine what area of paddle is hit
+				# Using paddle_loc, calculate if new_loc is in left, middle, or right third of paddle
+			# If hitting bottom
+				# End game (terminate program)
 	
+		# Destroy brick if one is hit
+			# Find path to top left of corner of brick
+				# Go left until left pixel is not the same color
+				# Go up until top pixel is not the same color
+			# Redraw as black
+
+		# Update ball velocity
+			# If ball hits paddle on:
+				# center pixel
+					# vel_x = 0
+					# vel_y = vel_y * -1
+				# left of center pixel;
+					# vel_x = -1
+					# vel_y = vel_y * -1
+				# right of center pixel;
+					# vel_x = 1
+					# vel_y = vel_y * -1
+			# If ball hits wall:
+				# vel_x = vel_x * -1
+				# vel_y = vel_y
+			# If ball hits ceiling:
+				# vel_x = vel_x
+				# vel_y = vel_y * -1
+			# If ball hits brick on:
+				# bottom/top
+					# vel_x = vel_x
+					# vel_y = vel_y * -1
+				# side
+					# vel_x = vel_x * -1
+					# vel_y = vel_y
+	
+	# Update ball location
+		# if collision, new_loc = curr_loc + vel
+		
 	# 3. Draw the screen
 	# Redraw ball
 	# Need to store current ball position and trajectory somewhere in memory
 	add $a0, BALL_LOC, 
-	
 	jal draw_ball
+	
 	
 	# Redraw paddel
 	beq $v1, 0x61, move_left
