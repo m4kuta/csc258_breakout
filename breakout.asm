@@ -8,7 +8,7 @@
 # - Unit height in pixels:      4
 # - Display width in pixels:    512
 # - Display height in pixels:   256
-# - Base Address for Display:   0x10008000 ($gp) (FOR SOME REASON IT ONLY WORKS WHEN I WRITE THIS BUT SET IT TO THE OTHER
+# - Base Address for Display:   0x10008000 ($gp) 
 ##############################################################################
 
 .data
@@ -16,21 +16,40 @@
 # Immutable Data
 ##############################################################################
 # The address of the bitmap display. Don't forget to connect it!
-ADDR_DSPL:
-    .word 0x10008000
+
 # The address of the keyboard. Don't forget to connect it!
 ADDR_KBRD:
     .word 0xffff0000
+ADDR_DSPL:
+	.word 0x10008000
 PADDLE_CLR:
+	.word 0x2222ff
+	
 BRICKS_CLR:
+	.word 0xff0000
+	
 WALL_CLR:
+	.word 0xffffff
+	
+BALL_CLR:
+	.word 0x55ff55
+	
 ##############################################################################
 # Mutable Data
 BALL_POS_X:
+	.word 65
+	
 BALL_POS_Y:
+	.word 55
+	
 BALL_VEL_X:
+	.word 0
+	
 BALL_VEL_Y:
+	.word -1
+	
 PADDLE_POS:
+	.word 16
 ##############################################################################
 
 ##############################################################################
@@ -43,18 +62,21 @@ PADDLE_POS:
 main:
     # Draw initial bricks
 	jal draw_first_round_red
-	
 	# Draw walls
     jal draw_walls
     
 	# Draw initial paddle position
-    li $a0, 54 #set x of the paddle
-    jal draw_paddle
+  	la $t0, PADDLE_POS # Need to store current position of paddle somewhere in memory
+	la $t1, PADDLE_CLR
+	lw $a0, 0($t0)
+	lw $a1, 0($t1)
+	jal draw_paddle
 
 	# Draw initial ball position
-	li $a0, 65 #set x of the ball
-    li $a1, 55 #set y of the ball
-   	jal draw_ball
+	lw $a0, BALL_POS_X
+	lw $a1, BALL_POS_Y
+	lw $a2, BALL_CLR
+	jal draw_ball
     
 	# Set initial velocity of the ball
 	# TODO
@@ -128,7 +150,8 @@ game_loop:
 	# 3. Draw the screen
 	# Redraw ball
 	# Need to store current ball position and trajectory somewhere in memory
-	add $a0, BALL_LOC, 
+	lw $a0, BALL_POS_X
+	lw $a1, BALL_POS_Y
 	jal draw_ball
 	
 	
@@ -139,7 +162,8 @@ game_loop:
 		li $t0, -1
 	move_right:
 		li $t0, 1	
-	add $a0, KBRD_LOC, $t0 # Need to store current position of paddle somewhere in memory
+	lw $a0, PADDLE_POS # Need to store current position of paddle somewhere in memory
+	lw $a1, PADDLE_CLR
 	jal draw_paddle
 	
 	# 4. Sleep
@@ -151,22 +175,21 @@ game_loop:
     b game_loop
     
 draw_paddle:
-	la $t0, ADDR_DSPL #put display address into t0
-	li $a1, 60 #set y position
+	lw $t0, ADDR_DSPL #put display address into t0
+	li $a2, 60 #set y position
 	sll $a0, $a0, 2 #mutliply the x
-	sll $a1, $a1, 9 # multiply the y
-	add $a0, $a0, $a1 #combine them
+	sll $a2, $a2, 9 # multiply the y
+	add $a0, $a0, $a2 #combine them
 	add $t0, $t0, $a0 #add that to t0
-	li $t1 0xffff55 #get the ball color
-	sw $t1, 0($t0) #paint
-	sw $t1, 4($t0) #paint
-	sw $t1, 8($t0) #paint
-	sw $t1, 12($t0) #paint
-	sw $t1, 16($t0) #paint
-	sw $t1, 20($t0) #paint
-	sw $t1, 24($t0) #paint
-	sw $t1, 28($t0) #paint
-	sw $t1, 32($t0) #paint
+	sw $a1, 0($t0) #paint
+	sw $a1, 4($t0) #paint
+	sw $a1, 8($t0) #paint
+	sw $a1, 12($t0) #paint
+	sw $a1, 16($t0) #paint
+	sw $a1, 20($t0) #paint
+	sw $a1, 24($t0) #paint
+	sw $a1, 28($t0) #paint
+	sw $a1, 32($t0) #paint
    	jr $ra
     
 draw_first_round_red:
@@ -214,7 +237,7 @@ draw_block:
 	#t0 is the start of the bitmap display
 	#t3 is the location where we stop drawing the row if we get there
 	#t4 is the location where we stop drawing the whole thing if we get there
-	la $t0, ADDR_DSPL #put display address into t0
+	lw $t0, ADDR_DSPL #put display address into t0
 	sll $a0, $a0, 2 #mutliply the x
 	sll $a1, $a1, 9 # multiply the y
 	add $a0, $a0, $a1 #combine them
@@ -240,17 +263,16 @@ end_block_loop_y:
 	        
 draw_ball:
 	#TODO or should ball position be in .data
-	la $t0, ADDR_DSPL #put display address into t0
+	lw $t0, ADDR_DSPL #put display address into t0
 	sll $a0, $a0, 2 #mutliply the x
 	sll $a1, $a1, 9 # multiply the y
 	add $a0, $a0, $a1 #combine them
 	add $t0, $t0, $a0 #add that to t0
-	li $t1 0x33ff33 #get the ball color
-	sw $t1, 0($t0) #paint
+	sw $a2, 0($t0) #paint
 	jr $ra #return
 	
 draw_walls:
-	la $t0, ADDR_DSPL #display address
+	lw $t0, ADDR_DSPL #display address
 	li $t2 0xffffff #color white
 	addi $t1, $t0, 512 #this is the location at the end of the top border
 top_loop:
@@ -259,7 +281,7 @@ top_loop:
 	addi $t0, $t0, 4 #move our coordinate
 	j top_loop #loop
 end_top_loop:
-	la $t0, ADDR_DSPL # go back to the start of the display
+	lw $t0, ADDR_DSPL # go back to the start of the display
 	li $t1, 0x10018000 #endpoint of where we're drawing
 side_loop:
 	slt $t5, $t0, $t1
@@ -269,19 +291,10 @@ side_loop:
 	sw $t2, 508($t0) #draw a pixel on the other edge of the screen (right wall)
 	j side_loop #loop
 end_side_loop:
-	la $t0, ADDR_DSPL # i think this is unnecessary
+	lw $t0, ADDR_DSPL # i think this is unnecessary
 	jr $ra #return
 	
-erase_ball:
-	#TODO or should ball position be in .data
-	la $t0, ADDR_DSPL #put display address into t0
-	sll $a0, $a0, 2 #mutliply the x
-	sll $a1, $a1, 9 # multiply the y
-	add $a0, $a0, $a1 #combine them
-	add $t0, $t0, $a0 #add that to t0
-	li $t1 0x000000 #get the color black
-	sw $t1, 0($t0) #paint
-	jr $ra
+
 	
 get_keystroke:
 	li $v0, 32 # sleep syscall
