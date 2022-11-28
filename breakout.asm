@@ -2,7 +2,7 @@
 # This file contains our implementation of Breakout.
 #
 # Student 1: David Basil 1006900285
-# Student 2: Name, Student Number
+# Student 2: Haolin Fan, 1003364316
 ######################## Bitmap Display Configuration ########################
 # - Unit width in pixels:       4
 # - Unit height in pixels:      4
@@ -11,7 +11,7 @@
 # - Base Address for Display:   0x10008000 ($gp) (FOR SOME REASON IT ONLY WORKS WHEN I WRITE THIS BUT SET IT TO THE OTHER
 ##############################################################################
 
-    .data
+.data
 ##############################################################################
 # Immutable Data
 ##############################################################################
@@ -24,39 +24,72 @@ ADDR_KBRD:
 
 ##############################################################################
 # Mutable Data
+KBRD_LOC:
+BALL_LOC:
 ##############################################################################
 
 ##############################################################################
 # Code
 ##############################################################################
-	.text
-	.globl main
+.text
+.globl main
 
-	# Run the Brick Breaker game.
+# Run the Brick Breaker game.
 main:
-    jal draw_first_round_red
+    # Draw initial bricks
+	jal draw_first_round_red
+	
+	# Draw walls
     jal draw_walls
-    li $a0, 65 #set x of the ball
+    
+	# Draw initial ball position
+	li $a0, 65 #set x of the ball
     li $a1, 55 #set y of the ball
-    jal draw_ball
+   	jal draw_ball
+    
+	# Draw initial paddle position
     li $a0, 54 #set x of the paddle
     jal draw_paddle
     
+	# Game loop
+	jal game_loop
+
     j end
-    
-    
-    
+
+
 
 game_loop:
 	# 1a. Check if key has been pressed
     # 1b. Check which key has been pressed
-    # 2a. Check for collisions
+	jal get_keystroke
+    
+	# 2a. Check for collisions
 	# 2b. Update locations (paddle, ball)
+	
 	# 3. Draw the screen
+	# Redraw ball
+	# Need to store current ball position and trajectory somewhere in memory
+	add $a0, BALL_LOC, 
+	
+	jal draw_ball
+	
+	# Redraw paddel
+	beq $v1, 0x61, move_left
+	beq $v1, 0x61, move_right
+	move_left:
+		li $t0, -1
+	move_right:
+		li $t0, 1	
+	add $a0, KBRD_LOC, $t0 # Need to store current position of paddle somewhere in memory
+	jal draw_paddle
+	
 	# 4. Sleep
-
-    #5. Go back to 1
-    #b game_loop
+	li 		$v0, 32
+	li 		$a0, 1
+	syscall
+    
+	#5. Go back to 1
+    b game_loop
     
 draw_paddle:
 	la $t0, ADDR_DSPL #put display address into t0
@@ -190,6 +223,44 @@ erase_ball:
 	li $t1 0x000000 #get the color black
 	sw $t1, 0($t0) #paint
 	jr $ra
+	
+get_keystroke:
+	li $v0, 32 # sleep syscall
+	li $a0, 1 # 1ms
+	syscall
+
+   	lw $t0, ADDR_KBRD               	# $t0 = base address for keyboard
+   	lw $t8, 0($t0)                  # Load first word from keyboard
+   	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
+   	
+   	j get_keystroke
+
+	keyboard_input:                     # A key is pressed
+    	lw $a0, 4($t0)                  # Load second word from keyboard
+		
+		beq $a0, 0x61, respond_to_A		# Check if the key a was pressed
+		beq $a0, 0x64, respond_to_D		# Check if the key d was pressed
+		beq $a0, 0x71, respond_to_Q     # Check if the key q was pressed
+		
+    	print: # print pressed key as ascii
+			li $v0, 11					
+			syscall
+
+    jr $ra # return
+
+	respond_to_A:
+		li $v1, 0x61
+		j print
+		
+	respond_to_D:
+		li $v1, 0x64
+		j print
+
+	respond_to_Q:
+		li $v0, 10                      # Quit gracefully
+		syscall
+
+	
 	
 
 end:
