@@ -294,7 +294,14 @@ end_side_loop:
 	lw $t0, ADDR_DSPL # i think this is unnecessary
 	jr $ra #return
 	
-
+get_unit_color
+	lw $t0, ADDR_DSPL #put display address into t0
+	sll $a0, $a0, 2 #mutliply the x
+	sll $a1, $a1, 9 # multiply the y
+	add $a0, $a0, $a1 #combine them
+	add $t0, $t0, $a0 #add that to t0
+	lw $v0, 0($t0) 
+	jr $ra
 	
 get_keystroke:
 	li $v0, 32 # sleep syscall
