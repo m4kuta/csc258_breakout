@@ -65,6 +65,12 @@ main:
 	# Draw walls
     jal draw_walls
     
+    	# Draw initial ball position
+	lw $a0, BALL_POS_X
+	lw $a1, BALL_POS_Y
+	lw $a2, BALL_CLR
+	jal draw_ball
+
 	# Draw initial paddle position
   	la $t0, PADDLE_POS # Need to store current position of paddle somewhere in memory
 	la $t1, PADDLE_CLR
@@ -72,11 +78,7 @@ main:
 	lw $a1, 0($t1)
 	jal draw_paddle
 
-	# Draw initial ball position
-	lw $a0, BALL_POS_X
-	lw $a1, BALL_POS_Y
-	lw $a2, BALL_CLR
-	jal draw_ball
+	
     
 	# Set initial velocity of the ball
 	# TODO
@@ -294,7 +296,7 @@ end_side_loop:
 	lw $t0, ADDR_DSPL # i think this is unnecessary
 	jr $ra #return
 	
-get_unit_color
+get_unit_color:
 	lw $t0, ADDR_DSPL #put display address into t0
 	sll $a0, $a0, 2 #mutliply the x
 	sll $a1, $a1, 9 # multiply the y
