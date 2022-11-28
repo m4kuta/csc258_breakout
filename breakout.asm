@@ -34,7 +34,7 @@ WALL_CLR:
 BALL_CLR:
 	.word 0x55ff55
 
-BKGD_CLR:
+BG_CLR:
 	.word 0x000000
 	
 ##############################################################################
@@ -162,13 +162,13 @@ game_loop:
 
 		# Top
 		add $a0, $s4, $zero # a0 = new_pos_x
-		addi $a1, $a1, 128 # a1 = top_unit
+		addi $a1, $a1, 1 # a1 = top_unit
 		jal get_unit_color
 		lw $t0, BRICKS_CLR
 		bne $v0, $t0, top_or_bottom_hit
 
 		# Bottom
-		addi $a1, $a1, -128 # a1 = bottom_unit
+		addi $a1, $a1, -1 # a1 = bottom_unit
 		jal get_unit_color
 		lw $t0, BRICKS_CLR
 		bne $v0, $t0, top_or_bottom_hit
@@ -185,11 +185,29 @@ game_loop:
 			mult $t0, $t0, -1
 			sw $t0, BALL_VEL_Y
 
-		# Destroy brick # TODO: Implement this
+		# Destroy brick
 		# Find brick's position 
-			# go left until you hit not BRICKS_CLR
-			# go up until you hit not BRICKS_CLR
-		# Draw brick's position with background color
+		# Go left until unit is not BRICKS_CLR
+		while_not_leftmost:
+			addi $a0, $s4, -1
+			jal get_unit_color
+			lw $t0, BRICKS_CLR
+			bne $v0, $t0, while_not_topmost
+			j while_not_leftmost
+		# Go up until unit is not BRICKS_CLR
+		while_not_topmost:
+			addi $a1, $s5, 1
+			jal get_unit_color
+			lw $t0, BRICKS_CLR
+			bne $v0, $t0, done
+			j while_not_topmost
+		done:
+			# Undraw brick
+			addi $a0, $a0, 1
+			addi $a1, $a1, -1
+			lw $a2, BG_CLR
+			jal draw_unit
+
 
 	paddle_collision:
 		# Determine area hit by math
@@ -242,7 +260,7 @@ game_loop:
 	# Undraw current ball position
 	add $a0, $s0, $zero
 	add $a1, $s1, $zero
-	lw $a2, BKGD_CLR
+	lw $a2, BG_CLR
 	jal draw_ball
 
 	# Calculate ball's new position using curr position and (potentially) new velocity
@@ -266,7 +284,7 @@ game_loop:
 	move_left:
 		# Undraw current paddle position
 		lw $a0, PADDLE_POS
-		lw $a1, BKGD_CLR
+		lw $a1, BG_CLR
 		jal draw_paddle
 
 		# Calculate new paddle position and redraw
@@ -278,7 +296,7 @@ game_loop:
 	move_right:
 		# Undraw current paddle position
 		lw $a0, PADDLE_POS
-		lw $a1, BKGD_CLR
+		lw $a1, BG_CLR
 		jal draw_paddle
 
 		# Calculate new paddle position and redraw
