@@ -273,11 +273,11 @@ game_loop:
 		
 		# Left
 		slt $t2, $s0, $t1 # t2 = 1 if ball current pos is left of paddle center
-		beq $t2, $zero, left_hit
+		bne $t2, $zero, left_hit
 		
 		# Right
 		sgt $t2, $s0, $t1 # t2 = 1 if ball current pos is right of paddle center
-		beq $t2, $zero, right_hit
+		bne $t2, $zero, right_hit
 
 		center_hit:
 			# Nullify x velocity
@@ -315,7 +315,7 @@ game_loop:
 			b erase_curr_ball
 	
 	
-	move_left: # TODO prevent moving past left side of screen
+	move_left: 
 		# Undraw current paddle position
 		lw $t0, PADDLE_POS
 		addi $a0, $t0, 0
@@ -323,22 +323,29 @@ game_loop:
 		jal draw_paddle # a0 = leftmost unit of paddle, a1 = color
 
 		# Calculate new paddle position and redraw
+		lw $t0, PADDLE_POS
+		ble  $t0, 1, no_farther_left
 		addi $a0, $a0, -1
 		sw $a0, PADDLE_POS
+		lw $a1, PADDLE_CLR
+		no_farther_left:
 		lw $a1, PADDLE_CLR
 		jal draw_paddle # a0 = leftmost unit of paddle, a1 = color
 		j done_drawing 
 
-	move_right: # TODO prevent moving past right side of screen
+	move_right: 
 		# Undraw current paddle position
 		lw $t0, PADDLE_POS
 		addi $a0, $t0, 0
 		lw $a1, BG_CLR
 		jal draw_paddle
-
+		lw $t0, PADDLE_POS
 		# Calculate new paddle position and redraw
+		bge $t0, 118, no_farther_right
 		addi $a0, $a0, 1
 		sw $a0, PADDLE_POS
+		lw $a1, PADDLE_CLR
+		no_farther_right:
 		lw $a1, PADDLE_CLR
 		jal draw_paddle
 		j done_drawing
@@ -495,7 +502,7 @@ get_keystroke:
    	lw $t0, ADDR_KBRD               	# $t0 = base address for keyboard
    	lw $t8, 0($t0)                  # Load first word from keyboard
    	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
-   	
+   	li $v1, 0
 	jr $ra # return
 
 	keyboard_input:                     # A key is pressed
