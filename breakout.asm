@@ -41,7 +41,7 @@ BG_CLR:
 # Mutable Data
 ##############################################################################
 BALL_POS_X:
-	.word 65
+	.word 67
 	
 BALL_POS_Y:
 	.word 55
@@ -53,7 +53,7 @@ BALL_VEL_Y:
 	.word -1
 	
 PADDLE_POS:
-	.word 16
+	.word 46
 
 
 ##############################################################################
@@ -72,9 +72,12 @@ main:
     jal draw_walls
     
     # Draw initial ball position
-	lw $a0, BALL_POS_X
-	lw $a1, BALL_POS_Y
-	lw $a2, BALL_CLR
+	la $a0, BALL_POS_X
+	lw $a0, 0($a0)
+	la $a1, BALL_POS_Y
+	lw $a1, 0($a1)
+	la $a2, BALL_CLR
+	lw $a2, 0($a2)
 	jal draw_ball
 
 	# Draw initial paddle position
@@ -113,11 +116,12 @@ game_loop:
 	add $a0, $s4, $zero
 	add $a1, $s5, $zero
 	jal get_unit_color # $a0: x_pos, $a1: y_pos, $v0: unit_color
-	
+	add $a0, $s4, $zero
+	add $a1, $s5, $zero
 	# Based on what object was hit, update ball's velocity
 	addi $t0, $zero, 0
 	beq $a1, $t0, ceiling_collision
-
+	
 	addi $t0, $zero, 64
 	beq $a1, $t0, bottom_collision
 
@@ -130,11 +134,45 @@ game_loop:
 	lw $t0, PADDLE_CLR
 	beq $v0, $t0, paddle_collision
 
+	add $a0, $s0, $zero
+	add $a1, $s1, $zero
+	lw $a2, BG_CLR
+	jal draw_ball
+
+	# Calculate ball's new position using curr position and (potentially) new velocity
+	lw $t0, BALL_VEL_X # t0 = new_vel_x
+	lw $t1, BALL_VEL_Y # t1 = new_vel_y
+	add $a0, $s0, $t0
+	add $a1, $s1, $t1
+	
+	# Update ball's position
+	sw $a0, BALL_POS_X
+	sw $a1, BALL_POS_Y
+	
+	# Redraw ball
+	lw $a2, BALL_CLR
+	jal draw_ball # a0 = BALL_POS_X, a1 = BALL_POS_Y, a2 = BALL_CLR
+	
+	# Redraw paddel
+	beq $s7, 0x61, move_left
+	beq $s7, 0x64, move_right
+	# 4. Sleep
+done_drawing:
+    
+	#5. Go back to 1
+    
+	li 		$v0, 32
+	li 		$a0, 1
+	syscall
+	b game_loop
+	
 	ceiling_collision:
 		# Reverse y velocity
 		lw $t0, BALL_VEL_Y
-		mult $t0, $t0, -1
+		sub $t0, $zero, $t0
+		sub $t0, $zero, $t0
 		sw $t0, BALL_VEL_Y
+		
 
 	bottom_collision:
 		# End game
@@ -143,8 +181,9 @@ game_loop:
 	wall_collision:
 		# Reverse x velocity
 		lw $t0, BALL_VEL_X
-		mult $t0, $t0, -1
+		sub $t0, $zero, $t0
 		sw $t0, BALL_VEL_X
+		
 	
 	brick_collision:
 		# Determine edge hit by checking color of adjacent units
@@ -176,37 +215,43 @@ game_loop:
 		left_or_right_hit:
 			# Reverse x velocity
 			lw $t0, BALL_VEL_X
-			mult $t0, $t0, -1
+			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_X
+			j while_not_leftmost
 
 		top_or_bottom_hit:
 			# Reverse y velocity
 			lw $t0, BALL_VEL_Y
-			mult $t0, $t0, -1
+			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_Y
+			j while_not_leftmost
 
 		# Destroy brick
 		# Find brick's position 
 		# Go left until unit is not BRICKS_CLR
 		while_not_leftmost:
-			addi $a0, $s4, -1
 			jal get_unit_color
 			lw $t0, BRICKS_CLR
-			bne $v0, $t0, while_not_topmost
+			bne $v0, $t0, not_topmost
+			addi $a0, $s4, -1
 			j while_not_leftmost
 		# Go up until unit is not BRICKS_CLR
+		not_topmost:
+			addi $a0, $a0, 1
+			j while_not_topmost
 		while_not_topmost:
-			addi $a1, $s5, 1
 			jal get_unit_color
 			lw $t0, BRICKS_CLR
 			bne $v0, $t0, done
+			addi $a1, $a1, -1
 			j while_not_topmost
 		done:
 			# Undraw brick
-			addi $a0, $a0, 1
-			addi $a1, $a1, -1
+			addi $a0, $a0, 0
+			addi $a1, $a1, 1
 			lw $a2, BG_CLR
-			jal draw_unit
+			jal draw_block
+			
 
 
 	paddle_collision:
@@ -233,8 +278,9 @@ game_loop:
 			
 			# reverse y velocity
 			lw $t0, BALL_VEL_Y
-			mult $t0, $t0, -1
+			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_Y
+			
 
 		left_hit:
 			# Set x velocity to -1
@@ -243,8 +289,9 @@ game_loop:
 			
 			# reverse y velocity
 			lw $t0, BALL_VEL_Y
-			mult $t0, $t0, -1
+			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_Y
+			
 
 		right_hit:
 			# Set x velocity to -1
@@ -253,37 +300,18 @@ game_loop:
 			
 			# reverse y velocity
 			lw $t0, BALL_VEL_Y
-			mult $t0, $t0, -1
+			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_Y
+		
 
 	# 3. Draw the screen
 	# Undraw current ball position
-	add $a0, $s0, $zero
-	add $a1, $s1, $zero
-	lw $a2, BG_CLR
-	jal draw_ball
-
-	# Calculate ball's new position using curr position and (potentially) new velocity
-	lw $t0, BALL_VEL_X # t0 = new_vel_x
-	lw $t1, BALL_VEL_Y # t1 = new_vel_y
-	add $a0, $s0, $t0
-	add $a1, $s1, $t1
 	
-	# Update ball's position
-	sw $a0, BALL_POS_X
-	sw $a1, BALL_POS_Y
-	
-	# Redraw ball
-	lw $a2, BALL_CLR
-	jal draw_ball # a0 = BALL_POS_X, a1 = BALL_POS_Y, a2 = BALL_CLR
-	
-	# Redraw paddel
-	beq $s7, 0x61, move_left
-	beq $s7, 0x64, move_right
 	
 	move_left:
 		# Undraw current paddle position
-		lw $a0, PADDLE_POS
+		lw $t0, PADDLE_POS
+		addi $a0, $t0, 0
 		lw $a1, BG_CLR
 		jal draw_paddle
 
@@ -292,36 +320,34 @@ game_loop:
 		sw $a0, PADDLE_POS
 		lw $a1, PADDLE_CLR
 		jal draw_paddle
+		j done_drawing
 
 	move_right:
 		# Undraw current paddle position
-		lw $a0, PADDLE_POS
+		lw $t0, PADDLE_POS
+		addi $a0, $t0, 0
 		lw $a1, BG_CLR
 		jal draw_paddle
 
 		# Calculate new paddle position and redraw
-		addi $a0, $a0, -1
+		addi $a0, $a0, 1
 		sw $a0, PADDLE_POS
 		lw $a1, PADDLE_CLR
 		jal draw_paddle
+		j done_drawing
 	
-	# 4. Sleep
-	li 		$v0, 32
-	li 		$a0, 1
-	syscall
-    
-	#5. Go back to 1
-    b game_loop
+	
     
 draw_paddle:
 	# a0: PADDLE_POS
 	# a1: PADDLE_CLR
-	lw $t0, ADDR_DSPL #put display address into t0
+	la $t0, ADDR_DSPL #put display address into t0
+	lw $t0, 0($t0)
 	li $a2, 60 #set y position
-	sll $a0, $a0, 2 #mutliply the x
-	sll $a2, $a2, 9 # multiply the y
-	add $a0, $a0, $a2 #combine them
-	add $t0, $t0, $a0 #add that to t0
+	sll $t3, $a0, 2 #mutliply the x
+	sll $t4, $a2, 9 # multiply the y
+	add $t3, $t3, $t4 #combine them
+	add $t0, $t0, $t3 #add that to t0
 	sw $a1, 0($t0) #paint
 	sw $a1, 4($t0) #paint
 	sw $a1, 8($t0) #paint
@@ -379,11 +405,12 @@ draw_block:
 	#t0 is the start of the bitmap display
 	#t3 is the location where we stop drawing the row if we get there
 	#t4 is the location where we stop drawing the whole thing if we get there
-	lw $t0, ADDR_DSPL #put display address into t0
-	sll $a0, $a0, 2 #mutliply the x
-	sll $a1, $a1, 9 # multiply the y
-	add $a0, $a0, $a1 #combine them
-	add $t0, $t0, $a0 #add that to t0
+	la $t0, ADDR_DSPL #put display address into t0
+	lw $t0, 0($t0)
+	sll $t5, $a0, 2 #mutliply the x
+	sll $t7, $a1, 9 # multiply the y
+	add $t5, $t5, $t7 #combine them
+	add $t0, $t0, $t5 #add that to t0
 	addi $t1, $t0, 0 # set t1 to display address
 	addi $t2, $t1, 0 # set t2 to display address
 	addi $t4, $t2, 2048 # t4 = coordinate to stop whole thing when we reach it
@@ -405,17 +432,19 @@ end_block_loop_y:
 	        
 draw_ball:
 	#TODO or should ball position be in .data
-	lw $t0, ADDR_DSPL #put display address into t0
-	sll $a0, $a0, 2 #mutliply the x
-	sll $a1, $a1, 9 # multiply the y
-	add $a0, $a0, $a1 #combine them
-	add $t0, $t0, $a0 #add that to t0
+	la $t0, ADDR_DSPL #put display address into t0
+	lw $t0, 0($t0)
+	sll $t5, $a0, 2 #mutliply the x
+	sll $t7, $a1, 9 # multiply the y
+	add $t5, $t5, $t7 #combine them
+	add $t0, $t0, $t5 #add that to t0
 	sw $a2, 0($t0) #paint
 	jr $ra #return
 	
 
 draw_walls:
-	lw $t0, ADDR_DSPL #display address
+	la $t0, ADDR_DSPL #put display address into t0
+	lw $t0, 0($t0)
 	li $t2 0xffffff #color white
 	addi $t1, $t0, 512 #this is the location at the end of the top border
 top_loop:
@@ -424,8 +453,9 @@ top_loop:
 	addi $t0, $t0, 4 #move our coordinate
 	j top_loop #loop
 end_top_loop:
-	lw $t0, ADDR_DSPL # go back to the start of the display
-	li $t1, 0x10018000 #endpoint of where we're drawing
+	la $t0, ADDR_DSPL #put display address into t0
+	lw $t0, 0($t0)
+	addi $t1, $t0, 32768#endpoint of where we're drawing
 side_loop:
 	slt $t5, $t0, $t1
 	beq $t5, $zero, end_side_loop
@@ -434,18 +464,18 @@ side_loop:
 	sw $t2, 508($t0) #draw a pixel on the other edge of the screen (right wall)
 	j side_loop #loop
 end_side_loop:
-	lw $t0, ADDR_DSPL # i think this is unnecessary
 	jr $ra #return
 	
 
 get_unit_color:
 	#a0: x pos
 	#a1: y pos
-	lw $t0, ADDR_DSPL #put display address into t0
-	sll $a0, $a0, 2 #mutliply the x
-	sll $a1, $a1, 9 # multiply the y
-	add $a0, $a0, $a1 #combine them
-	add $t0, $t0, $a0 #add that to t0
+	la $t0, ADDR_DSPL #put display address into t0
+	lw $t0, 0($t0)
+	sll $t5, $a0, 2 #mutliply the x
+	sll $t7, $a1, 9 # multiply the y
+	add $t5, $t5, $t7 #combine them
+	add $t0, $t0, $t5 #add that to t0
 	lw $v0, 0($t0) 
 	jr $ra
 	
@@ -458,8 +488,8 @@ get_keystroke:
    	lw $t0, ADDR_KBRD               	# $t0 = base address for keyboard
    	lw $t8, 0($t0)                  # Load first word from keyboard
    	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
+   	jr $ra
    	
-   	j get_keystroke
 
 	keyboard_input:                     # A key is pressed
     	lw $a0, 4($t0)                  # Load second word from keyboard
