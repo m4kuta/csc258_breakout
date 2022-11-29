@@ -53,7 +53,7 @@ BALL_VEL_Y:
 	.word -1
 	
 PADDLE_POS:
-	.word 46
+	.word 67
 
 
 ##############################################################################
@@ -66,7 +66,6 @@ PADDLE_POS:
 main:
     # Draw initial bricks
 	jal draw_first_round_red
-	#
 	
 	# Draw walls
     jal draw_walls
@@ -90,54 +89,54 @@ main:
 	# Game loop
 	jal game_loop
 
-  
-
 
 game_loop:
 	# 1a. Check if key has been pressed
     # 1b. Check which key has been pressed
-	jal get_keystroke
-	add $s7, $v1, $zero
+	jal get_keystroke # v1 = pressed key
+	add $s7, $v1, $zero # s7 = pressed key
     
 	# 2a. Check for collisions
 	# 2b. Update locations (paddle, ball)
 	
 	# Load the current ball position and velocity
-	lw $s0, BALL_POS_X
-	lw $s1, BALL_POS_Y
-	lw $s2, BALL_VEL_X
-	lw $s3, BALL_VEL_Y
+	lw $s0, BALL_POS_X # s0 = current ball x position
+	lw $s1, BALL_POS_Y # s1 = current ball y position
+	lw $s2, BALL_VEL_X # s2 = current ball x velocity
+	lw $s3, BALL_VEL_Y # s3 = current ball y velocity
 	
 	# Calculate ball's new position using curr position and curr velocity
 	add $s4, $s0, $s2 # $s4 = new_pos_x
 	add $s5, $s1, $s3 # $s5 = new_pos_y
 
-	# Check for collisions by checking color of new position unit
-	add $a0, $s4, $zero
+	# Check for collisions by checking color of unit at new position
+	add $a0, $s4, $zero 
 	add $a1, $s5, $zero
 	jal get_unit_color # $a0: x_pos, $a1: y_pos, $v0: unit_color
-	add $a0, $s4, $zero
-	add $a1, $s5, $zero
-	# Based on what object was hit, update ball's velocity
-	addi $t0, $zero, 0
-	beq $a1, $t0, ceiling_collision
+	# add $a0, $s4, $zero
+	# add $a1, $s5, $zero
 	
-	addi $t0, $zero, 64
-	beq $a1, $t0, bottom_collision
+	# Based on what object was hit, update ball's velocity
+	beq $a1, $zero, ceiling_collision # ball y pos = 0
+	
+	beq $a1, 64, bottom_collision # ball y pos = 64
 
 	lw $t0, WALL_CLR
-	beq $v0, $t0, wall_collision
+	beq $v0, $t0, wall_collision # unit at new position is a wall
 
 	lw $t0, BRICKS_CLR
-	beq $v0, $t0, brick_collision
+	beq $v0, $t0, brick_collision # unit at new position is a brick
 
 	lw $t0, PADDLE_CLR
-	beq $v0, $t0, paddle_collision
+	beq $v0, $t0, paddle_collision # unit at new position is a paddle
 
-	add $a0, $s0, $zero
-	add $a1, $s1, $zero
-	lw $a2, BG_CLR
-	jal draw_ball
+	# 3. Draw the screen
+	# Undraw current ball position
+	erase_curr_ball:
+		add $a0, $s0, $zero # a0 = curr ball x pos
+		add $a1, $s1, $zero # a1 = curr ball y pos
+		lw $a2, BG_CLR # a2 = background color
+		jal draw_ball # erase current ball
 
 	# Calculate ball's new position using curr position and (potentially) new velocity
 	lw $t0, BALL_VEL_X # t0 = new_vel_x
@@ -145,34 +144,31 @@ game_loop:
 	add $a0, $s0, $t0
 	add $a1, $s1, $t1
 	
-	# Update ball's position
+	# Update ball's position and redraw
 	sw $a0, BALL_POS_X
 	sw $a1, BALL_POS_Y
-	
-	# Redraw ball
 	lw $a2, BALL_CLR
 	jal draw_ball # a0 = BALL_POS_X, a1 = BALL_POS_Y, a2 = BALL_CLR
 	
 	# Redraw paddel
-	beq $s7, 0x61, move_left
-	beq $s7, 0x64, move_right
-	# 4. Sleep
-done_drawing:
-    
-	#5. Go back to 1
-    
+	beq $s7, 0x61, move_left # a key pressed
+	beq $s7, 0x64, move_right # d key pressed
+	
+	done_drawing:
+	# 4. Sleep    
 	li 		$v0, 32
-	li 		$a0, 1
+	li 		$a0, 100
 	syscall
+
+	#5. Go back to 1
 	b game_loop
 	
 	ceiling_collision:
 		# Reverse y velocity
 		lw $t0, BALL_VEL_Y
 		sub $t0, $zero, $t0
-		sub $t0, $zero, $t0
 		sw $t0, BALL_VEL_Y
-		
+		b erase_curr_ball
 
 	bottom_collision:
 		# End game
@@ -183,32 +179,35 @@ done_drawing:
 		lw $t0, BALL_VEL_X
 		sub $t0, $zero, $t0
 		sw $t0, BALL_VEL_X
-		
+		b erase_curr_ball
 	
 	brick_collision:
 		# Determine edge hit by checking color of adjacent units
 		# Left
 		addi $a0, $s4, -1 # a0 = left_unit
-		jal get_unit_color 
+		add $a1, $s5, $zero # a1 = new_pos_y
+		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
 		bne $v0, $t0, left_or_right_hit
 
 		# Right
 		addi $a0, $s4, 1 # a0 = right_unit
-		jal get_unit_color
+		add $a1, $s5, $zero # a1 = new_pos_y
+		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
 		bne $v0, $t0, left_or_right_hit
 
-		# Top
+		# Bottom
 		add $a0, $s4, $zero # a0 = new_pos_x
-		addi $a1, $a1, 1 # a1 = top_unit
-		jal get_unit_color
+		addi $a1, $s5, 1 # a1 = bottom_unit
+		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
 		bne $v0, $t0, top_or_bottom_hit
 
-		# Bottom
-		addi $a1, $a1, -1 # a1 = bottom_unit
-		jal get_unit_color
+		# Top
+		add $a0, $s4, $zero # a0 = new_pos_x
+		addi $a1, $s5, -1 # a1 = top unit
+		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
 		bne $v0, $t0, top_or_bottom_hit
 
@@ -217,6 +216,9 @@ done_drawing:
 			lw $t0, BALL_VEL_X
 			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_X
+
+			add $a0, $s4, $zero # a0 = new_pos_x
+			add $a1, $s5, $zero # a1 = new_pos_y
 			j while_not_leftmost
 
 		top_or_bottom_hit:
@@ -224,55 +226,57 @@ done_drawing:
 			lw $t0, BALL_VEL_Y
 			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_Y
+
+			add $a0, $s4, $zero # a0 = new_pos_x
+			add $a1, $s5, $zero # a1 = new_pos_y
 			j while_not_leftmost
 
 		# Destroy brick
 		# Find brick's position 
 		# Go left until unit is not BRICKS_CLR
+	
 		while_not_leftmost:
 			jal get_unit_color
 			lw $t0, BRICKS_CLR
 			bne $v0, $t0, not_topmost
-			addi $a0, $s4, -1
-			
+			addi $a0, $a0, -1
 			j while_not_leftmost
-		# Go up until unit is not BRICKS_CLR
-		not_topmost:
-			addi $a1, $a1, -1
-			addi $a0, $a0, -2
+		
+		not_topmost: # increments x position (back into left edge of brick)
+			addi $a0, $a0, 1
 			j while_not_topmost
+
+		# Go up until unit is not BRICKS_CLR
 		while_not_topmost:
 			jal get_unit_color
 			lw $t0, BRICKS_CLR
 			bne $v0, $t0, done
 			addi $a1, $a1, -1
 			j while_not_topmost
+
 		done:
 			# Undraw brick
-			addi $a0, $a0, 0
-			addi $a1, $a1, 1
+			addi $a1, $a1, 1 # increments y position (back into top edge of brick)
 			lw $a2, BG_CLR
 			jal draw_block
-			
-			
-
+			b erase_curr_ball
 
 	paddle_collision:
-		# Determine area hit by math
+		# Determine area hit by ball
 		# Get paddle center center pos
 		lw $t0, PADDLE_POS # t0 = leftmost unit of paddle
-		addi $t1, $t0, 4 # t1 = center unit of paddle
+		addi $t1, $t0, 4 # t1 = center unit of paddle # TODO use variable for paddle width
 		
 		# Center
-		seq $t2, $s4, $t1 # t2 = 1 if ball is in center
+		seq $t2, $s0, $t1 # t2 = 1 if ball current pos is above paddle center
 		bne $t2, $zero, center_hit
 		
 		# Left
-		slt $t2, $s4, $t1 # t2 = 1 if ball is to the left of center
+		slt $t2, $s0, $t1 # t2 = 1 if ball current pos is left of paddle center
 		beq $t2, $zero, left_hit
 		
 		# Right
-		sgt $t2, $s4, $t1 # t2 = 1 if ball is to the right of center
+		sgt $t2, $s0, $t1 # t2 = 1 if ball current pos is right of paddle center
 		beq $t2, $zero, right_hit
 
 		center_hit:
@@ -284,10 +288,11 @@ done_drawing:
 			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_Y
 			
+			b erase_curr_ball
 
 		left_hit:
 			# Set x velocity to -1
-			addi $t0, $t0, -1 # TODO D2: use magnitude of x*-1 to support different x velocities
+			li $t0, -1 # TODO D2: use magnitude of x*-1 to support different x velocities
 			sw $t0, BALL_VEL_X 
 			
 			# reverse y velocity
@@ -295,37 +300,36 @@ done_drawing:
 			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_Y
 			
+			b erase_curr_ball
 
 		right_hit:
-			# Set x velocity to -1
-			addi $t0, $t0, 1 # TODO D2: use magnitude of x to support different x velocities
+			# Set x velocity to 1
+			li $t0, 1 # TODO D2: use magnitude of x to support different x velocities
 			sw $t0, BALL_VEL_X 
 			
 			# reverse y velocity
 			lw $t0, BALL_VEL_Y
 			sub $t0, $zero, $t0
 			sw $t0, BALL_VEL_Y
-		
 
-	# 3. Draw the screen
-	# Undraw current ball position
+			b erase_curr_ball
 	
 	
-	move_left:
+	move_left: # TODO prevent moving past left side of screen
 		# Undraw current paddle position
 		lw $t0, PADDLE_POS
 		addi $a0, $t0, 0
 		lw $a1, BG_CLR
-		jal draw_paddle
+		jal draw_paddle # a0 = leftmost unit of paddle, a1 = color
 
 		# Calculate new paddle position and redraw
 		addi $a0, $a0, -1
 		sw $a0, PADDLE_POS
 		lw $a1, PADDLE_CLR
-		jal draw_paddle
-		j done_drawing
+		jal draw_paddle # a0 = leftmost unit of paddle, a1 = color
+		j done_drawing 
 
-	move_right:
+	move_right: # TODO prevent moving past right side of screen
 		# Undraw current paddle position
 		lw $t0, PADDLE_POS
 		addi $a0, $t0, 0
@@ -484,15 +488,15 @@ get_unit_color:
 	
 
 get_keystroke:
-	li $v0, 32 # sleep syscall
-	li $a0, 1 # 1ms
-	syscall
+	# li $v0, 32 # sleep syscall
+	# li $a0, 1 # 1ms
+	# syscall
 
    	lw $t0, ADDR_KBRD               	# $t0 = base address for keyboard
    	lw $t8, 0($t0)                  # Load first word from keyboard
    	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
-   	jr $ra
    	
+	jr $ra # return
 
 	keyboard_input:                     # A key is pressed
     	lw $a0, 4($t0)                  # Load second word from keyboard
@@ -501,19 +505,17 @@ get_keystroke:
 		beq $a0, 0x64, respond_to_D		# Check if the key d was pressed
 		beq $a0, 0x71, respond_to_Q     # Check if the key q was pressed
 		
-    	print: # print pressed key as ascii
-			li $v0, 11					
-			syscall
-
-    jr $ra # return
+    	# print: # print pressed key as ascii
+		# 	li $v0, 11					
+		# 	syscall
 
 	respond_to_A:
 		li $v1, 0x61
-		j print
+		jr $ra # return
 		
 	respond_to_D:
 		li $v1, 0x64
-		j print
+		jr $ra # return
 
 	respond_to_Q:
 		li $v0, 10                      # Quit gracefully
