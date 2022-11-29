@@ -90,7 +90,7 @@ main:
 	# Game loop
 	jal game_loop
 
-    j end
+  
 
 
 game_loop:
@@ -234,10 +234,12 @@ done_drawing:
 			lw $t0, BRICKS_CLR
 			bne $v0, $t0, not_topmost
 			addi $a0, $s4, -1
+			
 			j while_not_leftmost
 		# Go up until unit is not BRICKS_CLR
 		not_topmost:
-			addi $a0, $a0, 1
+			addi $a1, $a1, -1
+			addi $a0, $a0, -2
 			j while_not_topmost
 		while_not_topmost:
 			jal get_unit_color
@@ -251,6 +253,7 @@ done_drawing:
 			addi $a1, $a1, 1
 			lw $a2, BG_CLR
 			jal draw_block
+			
 			
 
 
