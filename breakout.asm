@@ -27,6 +27,12 @@ PADDLE_CLR:
 	
 BRICKS_CLR:
 	.word 0xff0000
+
+BRICKS_CLR_2:
+	.word 0x00ff00
+	
+BRICKS_CLR_UNBREAKABLE:
+	.word 0x808080
 	
 WALL_CLR:
 	.word 0xffffff
@@ -136,6 +142,12 @@ game_loop:
 	lw $t0, BRICKS_CLR
 	beq $v0, $t0, brick_collision # unit at new position is a brick
 
+	lw $t0, BRICKS_CLR_2
+	beq $v0, $t0, brick_collision # unit at new position is a 2nd hit brick
+	
+	lw $t0, BRICKS_CLR_UNBREAKABLE
+	beq $v0, $t0, brick_collision # unit at new position is an unbreakable brick
+
 	lw $t0, PADDLE_CLR
 	beq $v0, $t0, paddle_collision # unit at new position is a paddle
 
@@ -221,12 +233,20 @@ game_loop:
 		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
 		bne $v0, $t0, left_or_right_hit
+		lw $t0, BRICKS_CLR_2
+		bne $v0, $t0, left_or_right_hit
+		lw $t0, BRICKS_CLR_UNBREAKABLE
+		bne $v0, $t0, left_or_right_hit
 
 		# Right
 		addi $a0, $s4, 1 # a0 = right_unit
 		add $a1, $s5, $zero # a1 = new_pos_y
 		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
+		bne $v0, $t0, left_or_right_hit
+		lw $t0, BRICKS_CLR_2
+		bne $v0, $t0, left_or_right_hit
+		lw $t0, BRICKS_CLR_UNBREAKABLE
 		bne $v0, $t0, left_or_right_hit
 
 		# Bottom
@@ -235,12 +255,20 @@ game_loop:
 		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
 		bne $v0, $t0, top_or_bottom_hit
+		lw $t0, BRICKS_CLR_2
+		bne $v0, $t0, top_or_bottom_hit
+		lw $t0, BRICKS_CLR_UNBREAKABLE
+		bne $v0, $t0, top_or_bottom_hit
 
 		# Top
 		add $a0, $s4, $zero # a0 = new_pos_x
 		addi $a1, $s5, -1 # a1 = top unit
 		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
+		bne $v0, $t0, top_or_bottom_hit
+		lw $t0, BRICKS_CLR_2
+		bne $v0, $t0, top_or_bottom_hit
+		lw $t0, BRICKS_CLR_UNBREAKABLE
 		bne $v0, $t0, top_or_bottom_hit
 
 		left_or_right_hit:
@@ -251,7 +279,8 @@ game_loop:
 
 			add $a0, $s4, $zero # a0 = new_pos_x
 			add $a1, $s5, $zero # a1 = new_pos_y
-			j while_not_leftmost
+
+			j destroy_brick
 
 		top_or_bottom_hit:
 			# Reverse y velocity
@@ -261,40 +290,63 @@ game_loop:
 
 			add $a0, $s4, $zero # a0 = new_pos_x
 			add $a1, $s5, $zero # a1 = new_pos_y
-			j while_not_leftmost
 
-		# Destroy brick
-		# Find brick's position 
-		# Go left until unit is not BRICKS_CLR
-	
-		while_not_leftmost:
-			jal get_unit_color
-			lw $t0, BRICKS_CLR
-			bne $v0, $t0, not_topmost
-			addi $a0, $a0, -1
-			j while_not_leftmost
-		
-		not_topmost: # increments x position (back into left edge of brick)
-			addi $a0, $a0, 1
-			j while_not_topmost
+			j destroy_brick
 
-		# Go up until unit is not BRICKS_CLR
-		while_not_topmost:
-			jal get_unit_color
-			lw $t0, BRICKS_CLR
-			bne $v0, $t0, done
-			addi $a1, $a1, -1
-			j while_not_topmost
+		destroy_brick:
+			# Check if brick color is unbreakable again
+			# add $a0, $s4, $zero 
+			# add $a1, $s5, $zero
+			# jal get_unit_color # $a0: x_pos, $a1: y_pos, $v0: unit_color
+			lw $t0, BRICKS_CLR_UNBREAKABLE
+			beq $v0, $t0, erase_curr_ball
 
-		done:
-			# Undraw brick
-			addi $a1, $a1, 1 # increments y position (back into top edge of brick)
-			lw $a2, BG_CLR
-			jal draw_block
-			lw $t0, BRICKS_LEFT #decrement the number of bricks left
-			addi $t0, $t0, -1
-			sw $t0, BRICKS_LEFT #store that
-			b erase_curr_ball
+			# Destroy brick by finding it's position 
+			# Go left until unit is not BRICKS_CLR
+			while_not_leftmost:
+				jal get_unit_color
+				lw $t0, BRICKS_CLR
+				bne $v0, $t0, not_topmost
+				addi $a0, $a0, -1
+				j while_not_leftmost
+			
+			not_topmost: # increments x position (back into left edge of brick)
+				addi $a0, $a0, 1
+				j while_not_topmost
+
+			# Go up until unit is not BRICKS_CLR
+			while_not_topmost:
+				jal get_unit_color
+				lw $t0, BRICKS_CLR
+				bne $v0, $t0, done
+				addi $a1, $a1, -1
+				j while_not_topmost
+
+			done:
+				addi $a1, $a1, 1 # increments y position (back into top edge of brick)
+				
+				jal get_unit_color # check color of brick
+				
+				lw $t0, BRICKS_CLR
+				beq $v0, $t0, draw_brick_2
+
+				lw $t0, BRICKS_CLR_2
+				beq $v0, $t0, erase_brick
+
+				draw_brick_2:
+					lw $a2, BRICKS_CLR_2
+					jal draw_block
+					b erase_curr_ball
+				
+				erase_brick:
+					lw $a2, BG_CLR
+					jal draw_block
+
+					lw $t0, BRICKS_LEFT #decrement the number of bricks left
+					addi $t0, $t0, -1
+					sw $t0, BRICKS_LEFT #store that
+					
+					b erase_curr_ball
 	
 	start_second_level:
 		jal draw_second_round
@@ -618,7 +670,8 @@ get_keystroke:
    	lw $t0, ADDR_KBRD               	# $t0 = base address for keyboard
    	lw $t8, 0($t0)                  # Load first word from keyboard
    	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
-   	li $v1, 0
+
+   	li $v1, 0 # no key pressed
 	jr $ra # return
 
 	keyboard_input:                     # A key is pressed
@@ -626,22 +679,28 @@ get_keystroke:
 		
 		beq $a0, 0x61, respond_to_A		# Check if the key a was pressed
 		beq $a0, 0x64, respond_to_D		# Check if the key d was pressed
+		beq $a0, 0x70, respond_to_P		# Check if the key p was pressed
 		beq $a0, 0x71, respond_to_Q     # Check if the key q was pressed
 		
     	# print: # print pressed key as ascii
 		# 	li $v0, 11					
 		# 	syscall
 
-	respond_to_A:
+	respond_to_A: # move paddle left
 		li $v1, 0x61
 		jr $ra # return
 		
-	respond_to_D:
+	respond_to_D: # move paddle right
 		li $v1, 0x64
 		jr $ra # return
 
-	respond_to_Q:
-		li $v0, 10                      # Quit gracefully
+	respond_to_P: # pause
+		jal get_keystroke
+		bne $v1, 0x70, respond_to_P # if the key pressed is not p, keep waiting
+		jr $ra # return
+
+	respond_to_Q: # quit
+		li $v0, 10
 		syscall
 
 
