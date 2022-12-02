@@ -54,6 +54,9 @@ BALL_VEL_Y:
 	
 PADDLE_POS:
 	.word 67
+	
+LIFE_COUNT:
+	.word 3
 
 
 ##############################################################################
@@ -150,6 +153,8 @@ game_loop:
 	lw $a2, BALL_CLR
 	jal draw_ball # a0 = BALL_POS_X, a1 = BALL_POS_Y, a2 = BALL_CLR
 	
+	paddle_time:
+	
 	# Redraw paddel
 	beq $s7, 0x61, move_left # a key pressed
 	beq $s7, 0x64, move_right # d key pressed
@@ -171,8 +176,29 @@ game_loop:
 		b erase_curr_ball
 
 	bottom_collision:
-		# End game
+		lw $t0, LIFE_COUNT 
+		addi $t0, $t0, -1
+		beq $t0, $zero, lives_depleted #branch if we're out of lives
+		sw $t0, LIFE_COUNT #put life count back in memory after we decremented it earlier
+		lw $a0, BALL_POS_X
+		lw $a1, BALL_POS_Y
+		lw $a2, BG_CLR
+		jal draw_ball #erase the ball
+		lw $a0, PADDLE_POS
+		addi $a1, $zero, 55 #set the ball's new position to above the paddle
+		addi $t2, $zero, 0
+		addi $t3, $zero, -1
+		sw $t2, BALL_VEL_X
+		sw $t3, BALL_VEL_Y #make the ball's velocity be straght up
+		sw $a0, BALL_POS_X
+		sw $a1, BALL_POS_Y
+		lw $a2, BALL_CLR
+		jal draw_ball #draw the ball in the new position, 
+		j paddle_time # go back to the game loop so we don't miss a turn to  move the paddles
+		
+	lives_depleted:
 		j end
+
 
 	wall_collision:
 		# Reverse x velocity
