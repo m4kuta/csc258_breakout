@@ -37,6 +37,8 @@ BALL_CLR:
 BG_CLR:
 	.word 0x000000
 	
+
+	
 ##############################################################################
 # Mutable Data
 ##############################################################################
@@ -57,6 +59,9 @@ PADDLE_POS:
 	
 LIFE_COUNT:
 	.word 3
+	
+BRICKS_LEFT:
+	.word 38
 
 
 ##############################################################################
@@ -68,7 +73,8 @@ LIFE_COUNT:
 # Run the Brick Breaker game.
 main:
     # Draw initial bricks
-	jal draw_first_round_red
+    	jal erase_background
+	jal draw_first_round
 	
 	# Draw walls
     jal draw_walls
@@ -285,9 +291,20 @@ game_loop:
 			addi $a1, $a1, 1 # increments y position (back into top edge of brick)
 			lw $a2, BG_CLR
 			jal draw_block
+			lw $t0, BRICKS_LEFT #decrement the number of bricks left
+			addi $t0, $t0, -1
+			sw $t0, BRICKS_LEFT #store that
 			b erase_curr_ball
-
+	
+	start_second_level:
+		jal draw_second_round
+		b rest_of_paddle_collision
+		
 	paddle_collision:
+		#if we're done level 1, start level 2
+		lw $t0, BRICKS_LEFT 
+		beq $t0, $zero, start_second_level
+		rest_of_paddle_collision:
 		# Determine area hit by ball
 		# Get paddle center center pos
 		lw $t0, PADDLE_POS # t0 = leftmost unit of paddle
@@ -377,10 +394,23 @@ game_loop:
 		j done_drawing
 	
 	
-    
+erase_background:
+	lw $t0, ADDR_DSPL
+	lw $t1, BG_CLR
+	add $t2, $zero, $t0
+	addi $t2, $t2, 32768
+	background_loop:
+	bge $t0, $t2, end_background_loop
+	sw, $t1, 0($t0)
+	addi $t0, $t0, 4
+	j background_loop
+	end_background_loop:
+	jr $ra
+	
 draw_paddle:
 	# a0: PADDLE_POS
 	# a1: PADDLE_CLR
+	
 	la $t0, ADDR_DSPL #put display address into t0
 	lw $t0, 0($t0)
 	li $a2, 60 #set y position
@@ -399,20 +429,20 @@ draw_paddle:
 	sw $a1, 32($t0) #paint
    	jr $ra
     
-
-draw_first_round_red:
+draw_second_round:
 	li $a2, 0xff0000
 	li $t0, 10 #how many blocks wide
-	li $t1, 6 #how many blocks high
+	li $t1, 4 #how many blocks high
 	li $a0, 5 #first block x
 	li $a1, 5 #first block y
 	li $t2, 0 #number of rows of blocks drawn so far
-	addi $t6, $ra, 0 #save the address that we'll be returning to bc we will use ra
-first_round_loop_vert:
-	beq $t2, $t1, end_first_round_loop_vert
+	sw $ra, 40($sp) #save the address that we'll be returning to bc we will use ra
+second_round_loop_vert:
+	beq $t2, $t1, end_second_round_loop_vert
 	li $t3, 0 #number of blocks drawn so far
-first_round_loop_horiz:
-	beq $t3, $t0, end_first_round_loop_horiz
+second_round_loop_horiz:
+	beq $t3, $t0, end_second_round_loop_horiz
+	
 	sw $a0, 0($sp) #save stuff to the stack
 	sw $a1, 4($sp)#save stuff to the stack
 	sw $t0, 8($sp)#save stuff to the stack
@@ -428,13 +458,73 @@ first_round_loop_horiz:
 	lw $t3, 20($sp)#return stuff from the stack
 	addi $t3, $t3, 1 #iterate the number of blocks drawn
 	addi $a0, $a0, 12 #move the pointer right
+	j second_round_loop_horiz
+end_second_round_loop_horiz:
+ 	addi $t2, $t2, 1 # number of rows drawn += 1
+	addi $a1, $a1, 8 # move down
+	li $a0, 5 #move to the position x=5
+ 	j second_round_loop_vert #loop
+ end_second_round_loop_vert:
+ 	lw $t6, 40($sp)
+ 	jr $t6 #return
+
+draw_first_round:
+	li $a2, 0xff0000
+	li $t0, 10 #how many blocks wide on odd rows
+	li $t7, 4 #how many blocks wide on even rows
+	li $t1, 5 #how many blocks high
+	li $a0, 5 #first block x
+	li $a1, 5 #first block y
+	li $t2, 0 #number of rows of blocks drawn so far
+	sw $ra, 40($sp) #save the address that we'll be returning to bc we will use ra
+first_round_loop_vert:
+	beq $t2, $t1, end_first_round_loop_vert
+	li $t3, 0 #number of blocks drawn so far
+	
+first_round_loop_horiz:
+	
+	beq $t3, $t0, end_first_round_loop_horiz
+	addi $t5, $zero, 2
+	divu $t2, $t5
+	mfhi $t6
+	beq $t6, $zero, even
+	bge $t3, $t7, end_first_round_loop_horiz
+even:
+	sw $a0, 0($sp) #save stuff to the stack
+	sw $a1, 4($sp)#save stuff to the stack
+	sw $t0, 8($sp)#save stuff to the stack
+	sw $t1, 12($sp)#save stuff to the stack
+	sw $t2, 16($sp)#save stuff to the stack
+	sw $t3, 20($sp)#save stuff to the stack
+	sw $t4, 24($sp)#save stuff to the stack
+	sw $t5, 28($sp)#save stuff to the stack
+	sw $t6, 32($sp)#save stuff to the stack
+	sw $t7, 36($sp)#save stuff to the stack
+	jal draw_block #Call helper to draw a block at the coord a0 a1
+	lw $a0, 0($sp)#return stuff from the stack
+	lw $a1, 4($sp)#return stuff from the stack
+	lw $t0, 8($sp)#return stuff from the stack
+	lw $t1, 12($sp)#return stuff from the stack
+	lw $t2, 16($sp)#return stuff from the stack
+	lw $t3, 20($sp)#return stuff from the stack
+	lw $t4, 24($sp)#save stuff to the stack
+	lw $t5, 28($sp)#save stuff to the stack
+	lw $t6, 32($sp)#save stuff to the stack
+	lw $t7, 36($sp)#save stuff to the stack
+	addi $t3, $t3, 1 #iterate the number of blocks drawn
+	beq $t6, $zero, even_two
+	addi $a0, $a0, 24
+	even_two:
+	addi $a0, $a0, 12 #move the pointer right
 	j first_round_loop_horiz
+	
 end_first_round_loop_horiz:
  	addi $t2, $t2, 1 # number of rows drawn += 1
 	addi $a1, $a1, 8 # move down
 	li $a0, 5 #move to the position x=5
  	j first_round_loop_vert #loop
  end_first_round_loop_vert:
+ 	lw $t6, 40($sp)
  	jr $t6 #return
 
 
