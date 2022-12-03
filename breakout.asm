@@ -67,7 +67,7 @@ LIFE_COUNT:
 	.word 3
 	
 BRICKS_LEFT:
-	.word 38
+	.word 34
 
 
 ##############################################################################
@@ -305,8 +305,10 @@ game_loop:
 			# Go left until unit is not BRICKS_CLR
 			while_not_leftmost:
 				jal get_unit_color
-				lw $t0, BRICKS_CLR
-				bne $v0, $t0, not_topmost
+				lw $t0, BG_CLR
+				lw $t1, BALL_CLR
+				beq $v0, $t0, not_topmost
+				beq $v0, $t1, not_topmost
 				addi $a0, $a0, -1
 				j while_not_leftmost
 			
@@ -314,11 +316,13 @@ game_loop:
 				addi $a0, $a0, 1
 				j while_not_topmost
 
-			# Go up until unit is not BRICKS_CLR
+			# Go up until unit is not BRICKS_CLRbo
 			while_not_topmost:
 				jal get_unit_color
-				lw $t0, BRICKS_CLR
-				bne $v0, $t0, done
+				lw $t0, BG_CLR
+				lw $t1, BALL_CLR
+				beq $v0, $t0, done
+				beq $v0, $t1, done
 				addi $a1, $a1, -1
 				j while_not_topmost
 
@@ -518,6 +522,30 @@ end_second_round_loop_horiz:
  	j second_round_loop_vert #loop
  end_second_round_loop_vert:
  	lw $t6, 40($sp)
+ 	li $a0, 5 #unbreak block x
+	li $a1, 5 #unbreak block y
+	lw $a2, BRICKS_CLR_UNBREAKABLE
+	sw $t6, 0($sp)#save stuff to the stack
+	jal draw_block
+	lw $t6, 0($sp)#save stuff to the stack
+	li $a0, 113 #unbreak block x
+	li $a1, 5 #unbreak block y
+	lw $a2, BRICKS_CLR_UNBREAKABLE
+	sw $t6, 0($sp)#save stuff to the stack
+	jal draw_block
+	lw $t6, 0($sp)#save stuff to the stack
+	li $a0, 113 #unbreak block x
+	li $a1, 37 # block y
+	lw $a2, BRICKS_CLR_UNBREAKABLE
+	sw $t6, 0($sp)#save stuff to the stack
+	jal draw_block
+	lw $t6, 0($sp)#save stuff to the stack
+	li $a0, 5 #unbreak block x
+	li $a1, 37 # block y
+	lw $a2, BRICKS_CLR_UNBREAKABLE
+	sw $t6, 0($sp)#save stuff to the stack
+	jal draw_block
+	lw $t6, 0($sp)#save stuff to the stack
  	jr $t6 #return
 
 draw_first_round:
@@ -577,6 +605,30 @@ end_first_round_loop_horiz:
  	j first_round_loop_vert #loop
  end_first_round_loop_vert:
  	lw $t6, 40($sp)
+ 	li $a0, 5 #unbreak block x
+	li $a1, 5 #unbreak block y
+	lw $a2, BRICKS_CLR_UNBREAKABLE
+	sw $t6, 0($sp)#save stuff to the stack
+	jal draw_block
+	lw $t6, 0($sp)#save stuff to the stack
+	li $a0, 113 #unbreak block x
+	li $a1, 5 #unbreak block y
+	lw $a2, BRICKS_CLR_UNBREAKABLE
+	sw $t6, 0($sp)#save stuff to the stack
+	jal draw_block
+	lw $t6, 0($sp)#save stuff to the stack
+	li $a0, 113 #unbreak block x
+	li $a1, 37 # block y
+	lw $a2, BRICKS_CLR_UNBREAKABLE
+	sw $t6, 0($sp)#save stuff to the stack
+	jal draw_block
+	lw $t6, 0($sp)#save stuff to the stack
+	li $a0, 5 #unbreak block x
+	li $a1, 37 # block y
+	lw $a2, BRICKS_CLR_UNBREAKABLE
+	sw $t6, 0($sp)#save stuff to the stack
+	jal draw_block
+	lw $t6, 0($sp)#save stuff to the stack
  	jr $t6 #return
 
 
