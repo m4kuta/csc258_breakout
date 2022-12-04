@@ -64,7 +64,7 @@ PADDLE_POS:
 	.word 67
 	
 LIFE_COUNT:
-	.word 3
+	.word 5
 	
 BRICKS_LEFT:
 	.word 34
@@ -176,6 +176,7 @@ game_loop:
 	# Redraw paddel
 	beq $s7, 0x61, move_left # a key pressed
 	beq $s7, 0x64, move_right # d key pressed
+	
 	
 	done_drawing:
 	# 4. Sleep    
@@ -298,6 +299,9 @@ game_loop:
 			# add $a0, $s4, $zero 
 			# add $a1, $s5, $zero
 			# jal get_unit_color # $a0: x_pos, $a1: y_pos, $v0: unit_color
+			addi $a0, $s4, 0 # a0 = left_unit
+			addi $a1, $s5, 0 # a1 = curr_pos_y
+			jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 			lw $t0, BRICKS_CLR_UNBREAKABLE
 			beq $v0, $t0, erase_curr_ball
 
@@ -423,8 +427,8 @@ game_loop:
 
 		# Calculate new paddle position and redraw
 		lw $t0, PADDLE_POS
-		ble  $t0, 1, no_farther_left
-		addi $a0, $a0, -1
+		ble  $t0, 2, no_farther_left
+		addi $a0, $a0, -2
 		sw $a0, PADDLE_POS
 		lw $a1, PADDLE_CLR
 		no_farther_left:
@@ -440,8 +444,8 @@ game_loop:
 		jal draw_paddle
 		lw $t0, PADDLE_POS
 		# Calculate new paddle position and redraw
-		bge $t0, 118, no_farther_right
-		addi $a0, $a0, 1
+		bge $t0, 117, no_farther_right
+		addi $a0, $a0, 2
 		sw $a0, PADDLE_POS
 		lw $a1, PADDLE_CLR
 		no_farther_right:
