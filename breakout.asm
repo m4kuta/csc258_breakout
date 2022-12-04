@@ -228,48 +228,48 @@ game_loop:
 	brick_collision:
 		# Determine edge hit by checking color of adjacent units
 		# Left
-		addi $a0, $s4, -1 # a0 = left_unit
-		add $a1, $s5, $zero # a1 = new_pos_y
+		addi $a0, $s0, -1 # a0 = left_unit
+		addi  $a1, $s1, 0 # a1 = curr_pos_y
 		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
-		bne $v0, $t0, left_or_right_hit
+		beq $v0, $t0, left_or_right_hit
 		lw $t0, BRICKS_CLR_2
-		bne $v0, $t0, left_or_right_hit
+		beq $v0, $t0, left_or_right_hit
 		lw $t0, BRICKS_CLR_UNBREAKABLE
-		bne $v0, $t0, left_or_right_hit
+		beq $v0, $t0, left_or_right_hit
 
 		# Right
-		addi $a0, $s4, 1 # a0 = right_unit
-		add $a1, $s5, $zero # a1 = new_pos_y
+		addi $a0, $s0, 1 # a0 = left_unit
+		addi $a1, $s1, 0 # a1 = curr_pos_y
 		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
-		bne $v0, $t0, left_or_right_hit
+		beq $v0, $t0, left_or_right_hit
 		lw $t0, BRICKS_CLR_2
-		bne $v0, $t0, left_or_right_hit
+		beq $v0, $t0, left_or_right_hit
 		lw $t0, BRICKS_CLR_UNBREAKABLE
-		bne $v0, $t0, left_or_right_hit
+		beq $v0, $t0, left_or_right_hit
 
 		# Bottom
-		add $a0, $s4, $zero # a0 = new_pos_x
-		addi $a1, $s5, 1 # a1 = bottom_unit
+		addi $a0, $s0, 0 # a0 = left_unit
+		addi $a1, $s1, -1 # a1 = curr_pos_y
 		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
-		bne $v0, $t0, top_or_bottom_hit
+		beq $v0, $t0, top_or_bottom_hit
 		lw $t0, BRICKS_CLR_2
-		bne $v0, $t0, top_or_bottom_hit
+		beq $v0, $t0, top_or_bottom_hit
 		lw $t0, BRICKS_CLR_UNBREAKABLE
-		bne $v0, $t0, top_or_bottom_hit
+		beq $v0, $t0, top_or_bottom_hit
 
 		# Top
-		add $a0, $s4, $zero # a0 = new_pos_x
-		addi $a1, $s5, -1 # a1 = top unit
+		addi $a0, $s0, 0 # a0 = left_unit
+		addi $a1, $s1, 1 # a1 = curr_pos_y
 		jal get_unit_color # a0 = x_pos, a1 = y_pos, v0 = unit_color
 		lw $t0, BRICKS_CLR
-		bne $v0, $t0, top_or_bottom_hit
+		beq $v0, $t0, top_or_bottom_hit
 		lw $t0, BRICKS_CLR_2
-		bne $v0, $t0, top_or_bottom_hit
+		beq $v0, $t0, top_or_bottom_hit
 		lw $t0, BRICKS_CLR_UNBREAKABLE
-		bne $v0, $t0, top_or_bottom_hit
+		beq $v0, $t0, top_or_bottom_hit
 
 		left_or_right_hit:
 			# Reverse x velocity
