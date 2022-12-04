@@ -719,11 +719,11 @@ get_keystroke:
 	# li $a0, 1 # 1ms
 	# syscall
 
-   	lw $t0, ADDR_KBRD               	# $t0 = base address for keyboard
-   	lw $t8, 0($t0)                  # Load first word from keyboard
-   	beq $t8, 1, keyboard_input      # If first word 1, key is pressed
+   	lw $t0, ADDR_KBRD # $t0 = base address for keyboard
+   	lw $t8, 0($t0) # Load first word from keyboard
+   	beq $t8, 1, keyboard_input # If first word 1, key is pressed
 
-   	li $v1, 0 # no key pressed
+   	li $v1, 0 # no key pressed default
 	jr $ra # return
 
 	keyboard_input:                     # A key is pressed
@@ -747,8 +747,14 @@ get_keystroke:
 		jr $ra # return
 
 	respond_to_P: # pause
-		jal get_keystroke
+		lw $t0, ADDR_KBRD # $t0 = base address for keyboard
+   		lw $t8, 0($t0) # Load first word from keyboard
+   		
+		bne $t8, 1, respond_to_P # If first word 1, key is pressed
+		
+		lw $v1, 4($t0) # Load second word from keyboard (pressed key)   
 		bne $v1, 0x70, respond_to_P # if the key pressed is not p, keep waiting
+		
 		jr $ra # return
 
 	respond_to_Q: # quit
