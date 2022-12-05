@@ -43,8 +43,6 @@ BALL_CLR:
 BG_CLR:
 	.word 0x000000
 	
-
-	
 ##############################################################################
 # Mutable Data
 ##############################################################################
@@ -68,7 +66,6 @@ LIFE_COUNT:
 	
 BRICKS_LEFT:
 	.word 34
-
 
 ##############################################################################
 # Code
@@ -172,7 +169,6 @@ game_loop:
 	jal draw_ball # a0 = BALL_POS_X, a1 = BALL_POS_Y, a2 = BALL_CLR
 	
 	paddle_time:
-	
 	# Redraw paddel
 	beq $s7, 0x61, move_left # a key pressed
 	beq $s7, 0x64, move_right # d key pressed
@@ -217,7 +213,6 @@ game_loop:
 		
 	lives_depleted:
 		j end
-
 
 	wall_collision:
 		# Reverse x velocity
@@ -470,7 +465,6 @@ erase_background:
 draw_paddle:
 	# a0: PADDLE_POS
 	# a1: PADDLE_CLR
-	
 	la $t0, ADDR_DSPL #put display address into t0
 	lw $t0, 0($t0)
 	li $a2, 60 #set y position
@@ -524,8 +518,8 @@ end_second_round_loop_horiz:
 	addi $a1, $a1, 8 # move down
 	li $a0, 5 #move to the position x=5
  	j second_round_loop_vert #loop
- end_second_round_loop_vert:
- 	lw $t6, 40($sp)
+end_second_round_loop_vert:
+	lw $t6, 40($sp)
  	li $a0, 5 #unbreak block x
 	li $a1, 5 #unbreak block y
 	lw $a2, BRICKS_CLR_UNBREAKABLE
@@ -566,7 +560,6 @@ first_round_loop_vert:
 	li $t3, 0 #number of blocks drawn so far
 	
 first_round_loop_horiz:
-	
 	beq $t3, $t0, end_first_round_loop_horiz
 	addi $t5, $zero, 2
 	divu $t2, $t5
@@ -607,7 +600,7 @@ end_first_round_loop_horiz:
 	addi $a1, $a1, 8 # move down
 	li $a0, 5 #move to the position x=5
  	j first_round_loop_vert #loop
- end_first_round_loop_vert:
+end_first_round_loop_vert:
  	lw $t6, 40($sp)
  	li $a0, 5 #unbreak block x
 	li $a1, 5 #unbreak block y
@@ -678,7 +671,7 @@ draw_ball:
 	add $t0, $t0, $t5 #add that to t0
 	sw $a2, 0($t0) #paint
 	jr $ra #return
-	
+
 
 draw_walls:
 	la $t0, ADDR_DSPL #put display address into t0
@@ -754,7 +747,7 @@ get_keystroke:
 		lw $t0, ADDR_KBRD # $t0 = base address for keyboard
    		lw $t8, 0($t0) # Load first word from keyboard
    		
-		bne $t8, 1, respond_to_P # If first word 1, key is pressed
+		bne $t8, 1, respond_to_P # If first word not 1, no key is pressed
 		
 		lw $v1, 4($t0) # Load second word from keyboard (pressed key)   
 		bne $v1, 0x70, respond_to_P # if the key pressed is not p, keep waiting
