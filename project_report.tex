@@ -1,0 +1,77 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{color} 
+\usepackage{parskip}
+\usepackage{tikz}
+\usetikzlibrary{matrix}
+\usepackage{graphicx}
+\usepackage{algpseudocode}
+\usepackage{amsfonts}
+
+
+%%%% CODE COLORS
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+
+\title{CSC258 Breakout}
+\author{David Basil, Haolin Fan}
+\date{Dec 6, 2022}
+
+\begin{document}
+
+\maketitle
+
+\section{.data}
+We decided to store as mutable memory the number of bricks left to break, the number of remaining lives (\lstinline{LIFE_COUNT}), the paddle's position (\lstinline{PADDLE_POS}), the ball's position (\lstinline{BALL_POS_X}, \lstinline{BALL_POS_Y}), and the ball's velocity (\lstinline{BALL_VEL_X}, \lstinline{BALL_VEL_Y}). We also store as immutable memory the colors for each game entity (\lstinline{PADDLE_CLR}, \lstinline{BRICKS_CLR}, \lstinline{BRICKS_CLR_2}, \lstinline{BRICKS_CLR_UNBREAKABLE}, \lstinline{WALL_CLR}, \lstinline{BALL_CLR}, \lstinline{BG_CLR}), and the addresses for both the keyboard (\lstinline{ADDR_KBRD}) and the display (\lstinline{ADDR_DSPL}).
+
+The ball's position is stored as two separate words (x and y position), each with its own label. The ball's velocity is stored as two separate words, (x and y component) also each with its own label. Each color has its own label and is its own word, and the paddle's position is stored as one word, since its y coordinate will always be the same. The number of bricks left (just in the first level) has its own word, and the number of lives the player has left is also its own word.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.90\textwidth]{Data Segment.png}
+    \caption{A screenshot of the data segment.}
+\end{figure}
+Here, we see in order, the keyboard address, then the display address. Beside that, we have the RGBs of: the paddle color (dark blue), the bricks (red, green, gray depending on if they're breakable and how broken), the walls (white), and the ball (green). Then, we have the ball's initial x and y position (67 and 55 but in hex) then the ball's velocity's initial x component of zero and initial y component of -1 (in hex two's-complement). Then, the paddle's initial x coordinate at 67. After that, we have the number of lives remaining (originally 3) and the number of bricks remaining (hex for 38).
+
+\newpage 
+\section{Display}
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.90\textwidth]{Display.png}
+    \caption{The first screen in our breakout game. Note the difficult-to-see white walls on the top and sides.}
+\end{figure}
+
+\section{Collision}
+We decided that most of the collisions in the game will result in the angle of reflection being the same as the angle of incidence, as we remembered from physics classes. This means that if the ball hits a vertical surface (the left wall, the side of a brick), the x component of its velocity will be multiplied by $-1$ while the y component will stay the same. Conversely, if it hits a horizontal surface (the ceiling, the top of a brick), the x component stays the same while the y component gets multiplied by $-1$. This is how things would work physically (and, i believe, how they work in most versions of Breakout), so it'll be intuitive.
+
+The exception to this is on the paddle because we desire control. Depending on which part of the paddle the ball hits, it will go in different directions, away from the center of the paddle. In this game, we're keeping things relatively simple, so there are only three basic directions: If the ball hits the very center pixel of the paddle, it will go directly up. If it hits somewhere to the left of that, it goes 45 degrees up and to the left. If it hits somewhere to the right of the center, it goes 45 degrees up and to the right. 
+
+\section{How to Play}
+Use the A and D keys to move your paddle left and right. I know these controls are quite complicated, so if it ends up being too much for you, you can use P to pause the game or Q to quit it.
+
+From there, you just need to break the bricks. The ball will bounce away from the centre of your paddle, or directly upwards if it hits the middle. Try to aim it for the blocks. The green blocks can be broken in one hit, while the red blocks take two. Also, the gray blocks are invincible.
+
+If the ball hits the bottom of the screen, it will respawn four more times (giving you a total of five lives). If you can clear all the breakable bricks within your five attempts, and then touch the ball to the paddle one last time, you'll advance to the second level.
+\end{document}
