@@ -67,7 +67,7 @@ LIFE_COUNT:
 	.word 5
 	
 BRICKS_LEFT:
-	.word 34
+	.word 25
 
 
 ##############################################################################
@@ -181,7 +181,8 @@ game_loop:
 	done_drawing:
 	# 4. Sleep    
 	li 		$v0, 32
-	li 		$a0, 100
+	#TODO
+	li 		$a0, 75
 	syscall
 
 	#5. Go back to 1
@@ -358,6 +359,8 @@ game_loop:
 	
 	start_second_level:
 		jal draw_second_round
+		addi $t0, $zero, 100
+		sw $t0, BRICKS_LEFT
 		b rest_of_paddle_collision
 		
 	paddle_collision:
@@ -491,8 +494,8 @@ draw_paddle:
     
 draw_second_round:
 	li $a2, 0xff0000
-	li $t0, 10 #how many blocks wide
-	li $t1, 4 #how many blocks high
+	li $t0, 7 #how many blocks wide
+	li $t1, 5 #how many blocks high
 	li $a0, 5 #first block x
 	li $a1, 5 #first block y
 	li $t2, 0 #number of rows of blocks drawn so far
@@ -517,7 +520,7 @@ second_round_loop_horiz:
 	lw $t2, 16($sp)#return stuff from the stack
 	lw $t3, 20($sp)#return stuff from the stack
 	addi $t3, $t3, 1 #iterate the number of blocks drawn
-	addi $a0, $a0, 12 #move the pointer right
+	addi $a0, $a0, 18 #move the pointer right
 	j second_round_loop_horiz
 end_second_round_loop_horiz:
  	addi $t2, $t2, 1 # number of rows drawn += 1
@@ -554,7 +557,7 @@ end_second_round_loop_horiz:
 
 draw_first_round:
 	li $a2, 0xff0000
-	li $t0, 10 #how many blocks wide on odd rows
+	li $t0, 7 #how many blocks wide on odd rows
 	li $t7, 4 #how many blocks wide on even rows
 	li $t1, 5 #how many blocks high
 	li $a0, 5 #first block x
@@ -597,9 +600,9 @@ even:
 	lw $t7, 36($sp)#save stuff to the stack
 	addi $t3, $t3, 1 #iterate the number of blocks drawn
 	beq $t6, $zero, even_two
-	addi $a0, $a0, 24
+	addi $a0, $a0, 18
 	even_two:
-	addi $a0, $a0, 12 #move the pointer right
+	addi $a0, $a0, 18 #move the pointer right
 	j first_round_loop_horiz
 	
 end_first_round_loop_horiz:
@@ -651,10 +654,10 @@ draw_block:
 	add $t0, $t0, $t5 #add that to t0
 	addi $t1, $t0, 0 # set t1 to display address
 	addi $t2, $t1, 0 # set t2 to display address
-	addi $t4, $t2, 2048 # t4 = coordinate to stop whole thing when we reach it
+	addi $t4, $t2, 3072 # t4 = coordinate to stop whole thing when we reach it
 block_loop_y:
 	beq $t2, $t4, end_block_loop_y #if we have reached the last coordinate go to end
-	addi $t3, $t2, 32 #t3 = location to stop drawing row at
+	addi $t3, $t2, 36 #t3 = location to stop drawing row at
 	addi $t1, $t2, 0 # set t1 to equal t2, that is, start t1 at the beginning of this row
 block_loop_x:
 	beq $t1, $t3, end_block_loop_x #if we've reached t3, end
